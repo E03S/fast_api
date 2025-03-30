@@ -1,0 +1,10 @@
+fastapi
+uvicorn
+sqlalchemy
+pytest
+pytest-cov
+pytest-mock
+locust
+requests
+pydantic
+aioredis
