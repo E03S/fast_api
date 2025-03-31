@@ -57,3 +57,9 @@ Copy
   }
 ]
 ```
+# Usage
+```
+docker build -t fastapi-url-shortener .
+
+docker run -d -p 8000:8000 fastapi-url-shortener
+```
