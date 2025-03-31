@@ -30,10 +30,8 @@ class ShortenedUrl(Base):
 
     id = Column(Integer, primary_key=True)
     original_url = Column(String(255))
-    short_link = Column(String(7), unique=True, index=True)
+    short_link = Column(String, unique=True, index=True)
     use_count = Column(Integer)
     date_creation = Column(DateTime)
     date_last_use = Column(DateTime)
     expiration = Column(DateTime)
-
-    creator = relationship("User", back_populates="shortened_urls")

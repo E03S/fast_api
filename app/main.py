@@ -1,4 +1,4 @@
-from datetime import datetime, timezone
+from datetime import datetime, timezone, timedelta
 import json
 
 from fastapi import Body, Depends, FastAPI, HTTPException
@@ -17,6 +17,7 @@ from .service import create_short_link
 class URLRequest(BaseModel):
     url: str
     expiration_date: datetime = None
+    alias: str = None
 
 app = FastAPI()
 
@@ -41,14 +42,15 @@ async def get_short_link(
 
     timestamp = datetime.now().replace(tzinfo=timezone.utc).timestamp()
     short_link = create_short_link(url_req.url, timestamp)
-    expiration_date = url_req.expiration_date or (datetime.now() + datetime.timedelta(days=15))
+    expiration_date = url_req.expiration_date or (datetime.now() + timedelta(days=15))
+    name = url_req.alias or short_link
     obj = ShortenedUrl(
         original_url=url_req.url, 
-        short_link=short_link, 
+        short_link=name, 
         use_count = 0, 
         date_creation = datetime.now(), 
-        date_last_use = datetime.datetime(1, 1, 1, 0, 0), 
-        expirtion =expiration_date 
+        date_last_use = datetime(1, 1, 1, 0, 0), 
+        expiration =expiration_date 
     )
     db.add(obj)
     db.commit()
@@ -114,7 +116,7 @@ async def update_short_link(short_code: str, db: Session = Depends(get_db_sessio
     # Update the entry with the new short code
     shortened_url.short_link = short_link
     if shortened_url.expiration < datetime.now():
-        shortened_url.expiration =datetime.now() + datetime.timedelta(days=15)
+        shortened_url.expiration =datetime.now() + timedelta(days=15)
     db.commit()
 
     return {"detail": "Short link updated successfully", "new_short_link": short_link}
