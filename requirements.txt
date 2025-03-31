@@ -8,3 +8,4 @@ locust
 requests
 pydantic
 aioredis
+fastapi_users
