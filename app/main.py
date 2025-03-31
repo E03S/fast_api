@@ -48,8 +48,7 @@ async def get_short_link(
         use_count = 0, 
         date_creation = datetime.now(), 
         date_last_use = datetime.datetime(1, 1, 1, 0, 0), 
-        expirtion =expiration_date,
-        created_by=user.id  
+        expirtion =expiration_date 
     )
     db.add(obj)
     db.commit()
