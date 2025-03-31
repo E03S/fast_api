@@ -35,3 +35,10 @@ class ShortenedUrl(Base):
     date_creation = Column(DateTime)
     date_last_use = Column(DateTime)
     expiration = Column(DateTime)
+
+    creator = Column(String)
+
+class AuthString(Base):
+    __tablename__ = "auth_strings"
+    id = Column(Integer, primary_key=True, index=True)
+    auth_string = Column(String, unique=True, index=True)

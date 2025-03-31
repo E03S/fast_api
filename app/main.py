@@ -3,7 +3,6 @@ import json
 
 from fastapi import Body, Depends, FastAPI, HTTPException
 from fastapi.responses import RedirectResponse
-import fastapi_users 
 
 from pydantic import HttpUrl, BaseModel
 
@@ -11,8 +10,8 @@ from sqlalchemy.orm import Session
 
 import aioredis
 
-from .database import ShortenedUrl, get_db_session
-from .service import create_short_link
+from app.database import ShortenedUrl, get_db_session, AuthString
+from app.service import create_short_link
 
 class URLRequest(BaseModel):
     url: str
@@ -33,13 +32,33 @@ async def update_cache_with_url_usage(short_code: str, use_count: int):
     await redis.zadd("popular_urls", {short_code: use_count})
 #endregion 
 
+current_auth_string = 'Guest'
 
+@app.post("/auth/")
+def authenticate(auth_string: str, db: Session = Depends(get_db_session)):
+    global current_auth_string
+
+    # Check if the auth string exists in the database
+    db_auth_string = db.query(AuthString).filter(AuthString.auth_string == auth_string).first()
+
+    if db_auth_string:
+        current_auth_string = auth_string
+        return {"message": "Authenticated successfully", "auth_string": auth_string}
+    else:
+        raise HTTPException(status_code=404, detail="Auth string not found")
+
+@app.get("/current-auth/")
+def get_current_auth():
+    if current_auth_string:
+        return {"current_auth_string": current_auth_string}
+    else:
+        return {"message": "No auth string set"}
 
 @app.post("/links/shorten")
 async def get_short_link(
     url_req: URLRequest,db: Session = Depends(get_db_session)
 ):
-
+    global current_auth_string
     timestamp = datetime.now().replace(tzinfo=timezone.utc).timestamp()
     short_link = create_short_link(url_req.url, timestamp)
     expiration_date = url_req.expiration_date or (datetime.now() + timedelta(days=15))
@@ -50,7 +69,8 @@ async def get_short_link(
         use_count = 0, 
         date_creation = datetime.now(), 
         date_last_use = datetime(1, 1, 1, 0, 0), 
-        expiration =expiration_date 
+        expiration =expiration_date, 
+        creator = current_auth_string
     )
     db.add(obj)
     db.commit()
@@ -90,6 +110,10 @@ async def redirect_to_original_url(short_code: str, db: Session = Depends(get_db
 @app.delete("/links/{short_code}")
 async def delete_short_link(short_code: str, db: Session = Depends(get_db_session)):
     # Query the database for the short code
+    global current_auth_string
+    if current_auth_string == 'Guest':
+        raise HTTPException(status_code=404, detail="Guests not allowed")
+    
     shortened_url = db.query(ShortenedUrl).filter(ShortenedUrl.short_link == short_code).first()
 
     if not shortened_url:
@@ -104,6 +128,10 @@ async def delete_short_link(short_code: str, db: Session = Depends(get_db_sessio
 @app.put("/links/{short_code}")
 async def update_short_link(short_code: str, db: Session = Depends(get_db_session)):
     # Query the database for the short code
+    global current_auth_string
+    if current_auth_string == 'Guest':
+        raise HTTPException(status_code=404, detail="Guests not allowed")
+    
     shortened_url = db.query(ShortenedUrl).filter(ShortenedUrl.short_link == short_code).first()
 
     if not shortened_url:
