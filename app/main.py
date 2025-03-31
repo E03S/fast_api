@@ -47,6 +47,21 @@ def authenticate(auth_string: str, db: Session = Depends(get_db_session)):
     else:
         raise HTTPException(status_code=404, detail="Auth string not found")
 
+@app.post("/register/")
+def register_user(auth_string: str, db: Session = Depends(get_db_session)):
+    # Check if the username already exists
+    db_user = db.query(AuthString).filter(AuthString.auth_string == auth_string).first()
+    if db_user:
+        raise HTTPException(status_code=400, detail="Username already registered")
+
+    # Create the user record
+    db_user = AuthString(auth_string = auth_string)
+    db.add(db_user)
+    db.commit()
+    db.refresh(db_user)
+
+    return {"message": "User registered successfully", "username": db_user.username}
+
 @app.get("/current-auth/")
 def get_current_auth():
     if current_auth_string:
